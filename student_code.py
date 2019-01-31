@@ -117,32 +117,97 @@ class KnowledgeBase(object):
             return []
 
     def kb_retract(self, fact_or_rule):
-        """Retract a fact from the KB
-
-        Args:
-            fact (Fact) - Fact to be retracted
-
-        Returns:
-            None
-        """
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
         ####################################################
-        # Student code goes here
+        # Student code goes here 
+        if isinstance(fact_or_rule, Fact): # if the input is a fact 
+            if fact_or_rule in self.facts: # if the input fact is in our kb
+                fact = self._get_fact(fact_or_rule) #find this fact from our kb 
+                self.kb_retract_recursive(fact) 
+
+    def kb_retract_recursive(self, fact_or_rule):
+        #If the input is a fact
+        if isinstance(fact_or_rule, Fact):
+            if not fact_or_rule.supported_by: # if this input is not supported by anything  
+                #For FACTS  "fact_or_rule" supports: 
+                for x in fact_or_rule.supports_facts: # find all the facts it supports:
+                    for fact, rule in x.supported_by: # go through each of these facts' supported_by" list, delete everything associated with fact_or_rule
+                        if fact_or_rule==fact: 
+                            x.supported_by.remove([fact, rule])
+
+                    #after deleting input from the supported by list,  
+                    #remove if x's "supported_by" list is empty, and if it is not an asserted fact     
+                    if not x.supported_by and not x.asserted: 
+                        # we should remove it but we need to check whether it supports other things, 
+                        #so we need to go through the loop again. Evantually it will remove everything 
+                        self.kb_retract_recursive(x)
+                
+                #For RULES "fact_or_rule" supports: (same thing)
+                for y in fact_or_rule.supports_rules: 
+                    for fact, rule in y.supported_by:
+                        if fact_or_rule==fact:
+                            y.supported_by.remove([fact, rule])
+                    if not y.supported_by and not y.asserted:
+                        self.kb_retract_recursive(y)
+                
+                self.facts.remove(fact_or_rule)
+            #else if the input is supported by other fact and is asserted   
+            elif fact_or_rule.asserted:
+                fact_or_rule.asserted = False
+
+            #else if the input is supported but not asserted (i.e. referred), you do nothing
         
+             
+        #If the input is a rule
+        elif isinstance(fact_or_rule, Rule):
+            if not fact_or_rule.supported_by:
+                for x in fact_or_rule.supports_facts:
+                    for fact, rule in x.supported_by:
+                        if fact_or_rule==rule:
+                            x.supported_by.remove([fact, rule])
+                    if not x.supported_by and not x.asserted:
+                        self.kb_retract_recursive(x)
+
+                for y in fact_or_rule.supports_rules:
+                    for fact, rule in y.supported_by:
+                        if fact_or_rule==rule:
+                            y.supported_by.remove([fact, rule])
+                    if not y.supported_by and not y.asserted:
+                        self.kb_retract_recursive(y)
+                self.rules.remove(fact_or_rule)
+            
+            elif fact_or_rule.asserted:
+                fact_or_rule.asserted = False
+
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
-        """Forward-chaining to infer new facts and rules
-
-        Args:
-            fact (Fact) - A fact from the KnowledgeBase
-            rule (Rule) - A rule from the KnowledgeBase
-            kb (KnowledgeBase) - A KnowledgeBase
-
-        Returns:
-            Nothing            
-        """
         printv('Attempting to infer from {!r} and {!r} => {!r}', 1, verbose,
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        binding_inf=match(fact.statement, rule.lhs[0]) 
+        if binding_inf:  
+            if len(rule.lhs)>1: # if ther are more than 1 lhs, create new rule
+                new_lhs=[]
+                for i in range(1,len(rule.lhs)): 
+                    new_lhs.append(instantiate(rule.lhs[i], binding_inf)) #instantiate lhs and add to new lhs list
+                    new_rhs=instantiate(rule.rhs, binding_inf) #instatntiate rhs 
+                    new_rule=Rule([new_lhs, new_rhs], [[fact,rule]])
+                    kb.kb_add(new_rule) 
+                    fact.supports_rules.append(new_rule)
+                    rule.supports_rules.append(new_rule)
+
+            
+            else: # if there is only 1 lhs, create new fact
+                fact_sta = instantiate(rule.rhs, binding_inf) #instatntiate rhs
+                new_fact=Fact(fact_sta, [[fact,rule]])
+                kb.kb_add(new_fact)
+                fact.supports_facts.append(new_fact)
+                rule.supports_facts.append(new_fact)
+       # add f and r to supports_list 
+        
+
+ 
+
+

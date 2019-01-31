@@ -29,7 +29,7 @@ class KBTest(unittest.TestCase):
         answer = self.KB.kb_ask(ask1)
         self.assertEqual(str(answer[0]), "?X : felix")
         self.assertEqual(str(answer[1]), "?X : chen")
-
+    
     def test3(self):
         # Does retract actually retract things 
         r1 = read.parse_input("fact: (motherof ada bing)")
@@ -102,8 +102,8 @@ def pprint_support(fact_rule, indent):
                 print(' '*(indent+1), "support option")
                 for next in pair:
                     pprint_support(next, indent+2)
-
-
-
+      
 if __name__ == '__main__':
     unittest.main()
+
+
